@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">todo_application</string>
+
+    <string name="author">Kim hantak</string>
+
+    <string name="add">추가</string>
+    <string name="delete">삭제</string>
+</resources>
