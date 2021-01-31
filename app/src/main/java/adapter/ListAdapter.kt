@@ -7,30 +7,39 @@ import android.view.ViewGroup
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.ew.todo_application.R
+import database.Todo
 import model.ItemData
 
 class ListAdapter(
-            val context: Context
+        private val context: Context
         ) : RecyclerView.Adapter<ListAdapter.ListViewHolder>() {
 
-    private var list: ArrayList<ItemData> = arrayListOf(ItemData(1, "kimhantak"))
+    private var list: ArrayList<ItemData> = arrayListOf()
+
+    fun setList(list: List<Todo>) {
+        val convert = list.map {
+            ItemData(it.id!!, it.text ?: "")
+        } as ArrayList<ItemData>
+        this.list.addAll(convert)
+    }
+
+    fun clearList() {
+        list.clear()
+    }
+
+    override fun getItemId(position: Int): Long = position.toLong()
 
     override fun getItemCount(): Int = list.size
 
     override fun onBindViewHolder(holder: ListViewHolder, position: Int) = holder.bind(list[position])
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ListViewHolder {
-        val view = LayoutInflater.from(context).inflate(R.layout.item, parent, false)
-        return ListViewHolder(view)
+        return ListViewHolder(LayoutInflater.from(context).inflate(R.layout.item, parent, false))
     }
 
     inner class ListViewHolder(view: View) : RecyclerView.ViewHolder(view) {
-        val id: TextView by lazy {
-            view.findViewById(R.id.id)
-        }
-        val text: TextView by lazy {
-            view.findViewById(R.id.text)
-        }
+        private var id: TextView = view.findViewById(R.id.id)
+        private var text: TextView = view.findViewById(R.id.text)
         fun bind(item: ItemData) {
             id.text = item.id.toString()
             text.text = item.text

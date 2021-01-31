@@ -7,22 +7,37 @@ import adapter.ListAdapter
 import android.widget.TextView
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import database.DatabaseController
+import database.Todo
 import kotlinx.coroutines.*
-import java.text.DateFormat
+import model.ItemData
+import presenter.TodoContract
+import presenter.TodoPresenter
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
+import java.util.*
+import kotlin.collections.ArrayList
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity(), TodoContract.View {
 
-    lateinit var realtime: TextView
+    private lateinit var realtime: TextView
+    private lateinit var list: RecyclerView
+    private lateinit var listAdapter: ListAdapter
 
-    lateinit var list: RecyclerView
-    lateinit var adapter: ListAdapter
+    private lateinit var add: Button
+    private lateinit var delete: Button
 
-    lateinit var add: Button
-    lateinit var delete: Button
+    private lateinit var time: CoroutineScope
 
-    lateinit var time: CoroutineScope
+    private lateinit var presenter: TodoPresenter
+
+    private val databaseController: DatabaseController by lazy { DatabaseController(this, this) }
+
+    private val customDialog : CustomDialog by lazy { CustomDialog(this) {
+            presenter.insert()
+            presenter.hotReload()
+        }
+    }
 
     private val format: DateTimeFormatter = DateTimeFormatter.ofPattern("hh:mm:ss a")
 
@@ -35,11 +50,20 @@ class MainActivity : AppCompatActivity() {
         list = findViewById(R.id.list)
         delete = findViewById(R.id.delete)
 
-        adapter = ListAdapter(this)
+        listAdapter = ListAdapter(this)
+        with (list) {
+            adapter = listAdapter
+            layoutManager = LinearLayoutManager(this@MainActivity)
+            setHasFixedSize(true)
+        }
 
-        list.adapter = adapter
-        list.layoutManager = LinearLayoutManager(this)
-        list.setHasFixedSize(true)
+        presenter = TodoPresenter().apply {
+            attachView(this@MainActivity)
+            setController(databaseController)
+            loadList()
+        }
+
+        customDialog.setting("Alert!", "Enter todo:")
 
         time = CoroutineScope(Dispatchers.Default)
         time.launch {
@@ -48,17 +72,45 @@ class MainActivity : AppCompatActivity() {
                 delay(100L)
             }
         }
+
+        add.setOnClickListener { addClicked() }
+        delete.setOnClickListener { deleteClicked() }
     }
 
-    private suspend fun tick() {
-        realtime.text =
-                LocalDateTime
-                        .now()
-                        .format(format)
+    private fun tick() {
+        realtime.text = LocalDateTime.now().format(format)
+    }
+
+    override fun addItems(todo: ArrayList<Todo>) {
+        listAdapter.setList(todo)
+    }
+
+    override fun notifyDataChanged() {
+        this.runOnUiThread {
+            listAdapter.notifyDataSetChanged()
+        }
+    }
+
+    override fun getItem(): ItemData {
+        return ItemData(Random().nextInt(Int.MAX_VALUE), customDialog.text)
+    }
+
+    override fun addClicked() {
+        customDialog.show()
+    }
+
+    override fun deleteClicked() {
+        presenter.delete()
+        presenter.hotReload()
+    }
+
+    override fun clearList() {
+        listAdapter.clearList()
     }
 
     override fun onDestroy() {
         super.onDestroy()
+        presenter.detachView()
         time.cancel()
     }
 }
